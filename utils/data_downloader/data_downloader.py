@@ -59,7 +59,7 @@ def symbol_pattern(bucket_name, symbol):
     if 'equity' in bucket_name:
         return f'{symbol[0]}/{symbol}.csv.gz'
     elif 'futures' in bucket_name:
-        return f'/{symbol}/'
+        return f'{symbol}/'
     elif 'options' in bucket_name:
         return f'{symbol[0]}/{symbol}/'
 
