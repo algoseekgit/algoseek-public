@@ -93,7 +93,6 @@ def tradedate_task(tradedate_tickers, verbose=True):
     for ticker in tickers:
         try:
             command = f"aws s3 cp s3://{bucket_name.replace('yyyy', str(tradedate[:4]))}/{tradedate}/{ticker[0]}/{ticker}.csv.gz {loc_dir}/{tradedate[:4]}/{tradedate}/{ticker[0]}/{ticker}.csv.gz --profile {profile} --request-payer requester"
-            print(command)
             output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
             
             if verbose:
