@@ -10,11 +10,6 @@ from urllib.request import urlopen
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-# check python version
-if sys.version_info < (3, 5):
-    sys.stderr.write("You need python 3.5 or later to run this script\n")
-    exit(1)
-
 
 def tradedate_range(start_d, end_d, holidays):
     '''Range of trade dates from start date to end date including'''
@@ -93,22 +88,22 @@ def setup_parser():
     return parser
 
 
-def tradedate_task(tradedate, verbose=True):
+def tradedate_task(tradedate_tickers, verbose=True):
+    tradedate, tickers, bucket_name, loc_dir, profile = tradedate_tickers
     for ticker in tickers:
         try:
-            command = f"aws s3 cp s3://{args.bucket_name.replace('yyyy', str(tradedate[:4]))}/{tradedate}/{ticker[0]}/{ticker}.csv.gz {args.loc_dir}/{tradedate[:4]}/{tradedate}/{ticker[0]}/{ticker}.csv.gz --profile {args.profile} --request-payer requester"
+            command = f"aws s3 cp s3://{bucket_name.replace('yyyy', str(tradedate[:4]))}/{tradedate}/{ticker[0]}/{ticker}.csv.gz {loc_dir}/{tradedate[:4]}/{tradedate}/{ticker[0]}/{ticker}.csv.gz --profile {profile} --request-payer requester"
             output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
             
             if verbose:
                 print(output.decode().strip())
         except subprocess.CalledProcessError as e:
             error_text = f'fatal error: An error occurred (404) when calling the HeadObject operation: Key "{tradedate}/{ticker[0]}/{ticker}.csv.gz" does not exist'
-            
             if error_text != e.output.decode().strip():
                 raise RuntimeError(e.output.decode())
 
-def merge_by_secid(secid, files):
-    parent_dir = args.merge_dir / secid[:2]
+def merge_by_secid(secid, files, merge_dir):
+    parent_dir = merge_dir / secid[:2]
     parent_dir.mkdir(parents=True, exist_ok=True)
 
     ext = files[0].name.split('.', 1)[1]
@@ -129,68 +124,83 @@ def merge_by_secid(secid, files):
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-parser = setup_parser()
-args = parser.parse_args()
 
-# update data organized by year by ticker
-if args.tradedate_agg:
-    holidays = market_holidays()    
-    tradedates = tradedate_range(args.start_date, args.end_date, holidays)
 
-    tickers = None
-    if args.tickers_file:
-        with open(args.tickers_file) as f_ticker:
-            tickers = f_ticker.read().splitlines()
-    elif args.tickers:
-        tickers = args.tickers
+def main(args):
+    # update data organized by year by ticker
+    if args.tradedate_agg:
+        holidays = market_holidays()    
+        tradedates = tradedate_range(args.start_date, args.end_date, holidays)
 
-    if tickers:
-        with Pool(args.threads) as pool:
-            pool.map(tradedate_task, tradedates)
+        tickers = None
+        if args.tickers_file:
+            with open(args.tickers_file) as f_ticker:
+                tickers = f_ticker.read().splitlines()
+        elif args.tickers:
+            tickers = args.tickers
+
+        if tickers:
+            input_tradedate_task = [(tradedate, tickers, args.bucket_name, args.loc_dir, args.profile) for tradedate in tradedates] 
+            with Pool(args.threads) as pool:
+                pool.map(tradedate_task, input_tradedate_task)
+        else:
+            for year in range(args.start_year, args.end_year + 1):
+                command = ["aws", "s3", "sync", f"s3://{args.bucket_name}".replace('yyyy', str(year)), 
+                    f"{args.loc_dir}/{year}", "--profile", args.profile, "--request-payer", "requester"]
+            
+                subprocess.run(command)
+
+    # update data organized by year by SecId
     else:
+        secids = None
+        if args.secids_file:
+            with open(args.secids_file) as f_secid:
+                secids = f_secid.read().splitlines()
+        if args.secids:
+            secids = args.secids    
+    
         for year in range(args.start_year, args.end_year + 1):
             command = ["aws", "s3", "sync", f"s3://{args.bucket_name}".replace('yyyy', str(year)), 
                 f"{args.loc_dir}/{year}", "--profile", args.profile, "--request-payer", "requester"]
-            
+        
+            if secids:
+                command.extend(["--exclude", "*"])
+                for secid in secids:
+                    command.extend(["--include", f"{secid[0:2]}/{secid}.*"])
+        
             subprocess.run(command)
 
-# update data organized by year by SecId
-else:
-    secids = None
-    if args.secids_file:
-        with open(args.secids_file) as f_secid:
-            secids = f_secid.read().splitlines()
-    if args.secids:
-        secids = args.secids    
+    # for merging data by SecId
+    if args.merge_dir:
+        # get all data file with year organization
+        # and group data files by SecId
+        secid_groups = defaultdict(list)
+        target_files = args.loc_dir.glob(f"*/*/*")
     
-    for year in range(args.start_year, args.end_year + 1):
-        command = ["aws", "s3", "sync", f"s3://{args.bucket_name}".replace('yyyy', str(year)), 
-            f"{args.loc_dir}/{year}", "--profile", args.profile, "--request-payer", "requester"]
-        
-        if secids:
-            command.extend(["--exclude", "*"])
-            for secid in secids:
-                command.extend(["--include", f"{secid[0:2]}/{secid}.*"])
-        
-        subprocess.run(command)
+        for file_path in sorted(target_files):
+            secid = file_path.name.split('.')[0]
+            if secids:
+                if secid in secids:
+                    secid_groups[secid].append(file_path)
+            else:
+                if 'daily-changes' not in file_path.parts:
+                    secid_groups[secid].append(file_path)
 
-# for merging data by SecId
-if args.merge_dir:
-    # get all data file with year organization
-    # and group data files by SecId
-    secid_groups = defaultdict(list)
-    target_files = args.loc_dir.glob(f"*/*/*")
+        input_to_merge_by_secid = [(secid, paths, args.merge_dir) for secid, paths in secid_groups.items()]
+        # merge data by SecId
+        with Pool(args.threads) as pool:
+            pool.starmap(merge_by_secid, input_to_merge_by_secid)
+
+if __name__ == "__main__":
     
-    for file_path in sorted(target_files):
-        secid = file_path.name.split('.')[0]
-        if secids:
-            if secid in secids:
-                secid_groups[secid].append(file_path)
-        else:
-            if 'daily-changes' not in file_path.parts:
-                secid_groups[secid].append(file_path)
+    # check python version
+    if sys.version_info < (3, 5):
+        sys.stderr.write("You need python 3.5 or later to run this script\n")
+        exit(1)
     
-    # merge data by SecId
-    with Pool(args.threads) as pool:
-        pool.starmap(merge_by_secid, secid_groups.items())
+    parser = setup_parser()
+    args = parser.parse_args()
+    main(args)
+
+
 
