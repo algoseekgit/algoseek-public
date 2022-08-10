@@ -4,6 +4,8 @@ import pathlib
 import argparse
 import datetime
 import multiprocessing
+from functools import lru_cache
+
 
 import boto3
 
@@ -72,7 +74,7 @@ def list_dates(start_date_str, end_date_str):
         start_date = start_date + datetime.timedelta(days=1)
 
 
-def list_objects(bucket_name, dates, symbols):
+def list_objects(s3, bucket_name, dates, symbols):
     object_names = []
     if symbols:
         for date in dates:
@@ -95,7 +97,8 @@ def list_objects(bucket_name, dates, symbols):
     return object_names
 
 
-def copy_object(bucket_name, object_key, local_folder, sync=False, verbose=False):
+def copy_object(bucket_name, object_key, local_folder, profile, sync=False, verbose=False):
+    s3 = get_s3_resource(profile)
     object_local_path = local_folder / object_key
     if sync and object_local_path.exists():
         return
@@ -112,25 +115,32 @@ def copy_object(bucket_name, object_key, local_folder, sync=False, verbose=False
     	print(e)
 
 
+@lru_cache
+def get_s3_resource(profile):
+    session = boto3.session.Session(profile_name=profile)
+    s3 = session.resource('s3')
+    return s3
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-parser = setup_parser()
-args = parser.parse_args()
+def main(args):
+    s3 = get_s3_resource(args.profile)
+    dates = list_dates(args.start_date, args.end_date)
 
-session = boto3.session.Session(profile_name=args.profile)
-s3 = session.resource('s3')
+    objects = list_objects(s3, args.bucket_name, dates, set(args.symbols))
 
-dates = list_dates(args.start_date, args.end_date)
+    payload = [
+        (args.bucket_name, object_name, args.loc_dir, args.profile, args.sync, args.verbose)
+        for object_name in objects
+    ]
 
-objects = list_objects(args.bucket_name, dates, set(args.symbols))
+    with multiprocessing.Pool(args.threads) as pool:
+        pool.starmap(copy_object, payload)
 
-payload = [
-    (args.bucket_name, object_name, args.loc_dir, args.sync, args.verbose)
-    for object_name in objects
-]
-
-with multiprocessing.Pool(args.threads) as pool:
-    pool.starmap(copy_object, payload)
+if __name__ == '__main__':
+    parser = setup_parser()
+    args = parser.parse_args()
+    main(args)
 
 
