@@ -101,7 +101,7 @@ args = parser.parse_args()
 act = opra_event_type_to_action()
 
 if args.side:
-    if act not in ('OI', 'T', 'IN'):
+    if act not in ('OI', 'T', 'C', 'US', 'H', 'IN'):
         side = event_side()
         print(f"{act} {side}")
     else:
