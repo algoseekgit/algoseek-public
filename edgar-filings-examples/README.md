@@ -11,7 +11,7 @@ This is a collection of examples of how to use the Algoseek's Edgar Filing Datas
     - [Shares Outstanding](#shares-outstanding)
   - [Prerequisites](#prerequisites)
     - [Database credentials](#database-credentials)
-    - [Software](#software)
+    - [Software Requirements](#software-requirements)
   - [Usage](#usage)
 
 ## Available notebooks
@@ -40,9 +40,13 @@ For easy of use there is a `.env_example` file in the root of the project that y
 - `CLICKHOUSE_PASSWORD`: The password to authenticate
 - `CLICKHOUSE_DATABASE`: The database to use
 
-### Software
+### Software Requirements
 
-You will need to have `python 3.10` installed in your system, you can download it from the [official website](https://www.python.org/downloads/).
+The provided examples are written in Python and use Jupyter notebooks for execution. A `Makefile` is included to automate the installation of dependencies and run the examples. This will work seamlessly on a Linux or MacOS environment. If you are using a different operating system, you can manually run the commands specified in the `Makefile`.
+
+To run the examples, ensure that you have Python 3.10 installed on your system. You can download it from the [official website](https://www.python.org/downloads/).
+
+Additionally, the `Make` utility is required to execute the commands in the `Makefile`. It is typically available by default on Linux systems. If you don't have it, you can install it on a Linux system using `sudo apt install make`. For MacOS, you can install the Xcode command line tools with `xcode-select --install`.
 
 ## Usage
 
