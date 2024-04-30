@@ -13,6 +13,7 @@ This is a collection of examples of how to use the Algoseek's Edgar Filing Datas
     - [Database credentials](#database-credentials)
     - [Software Requirements](#software-requirements)
   - [Usage](#usage)
+  - [alternative usage](#alternative-usage)
 
 ## Available notebooks
 
@@ -63,3 +64,9 @@ make run
 ```
 
 This will open a Jupyter notebook in your browser, you can then navigate to the `edgar-filings-examples/notebooks` folder and open the examples.
+
+## alternative usage
+
+If you don't want to install a Jupyter notebook, you can run the examples directly using the database manager of your choice, for example you can use `dbeaver` to connect to the database and run the queries in the examples.
+
+You can find the queries in the `edgar-filings-examples/sql` folder, you can open them with a text editor and copy the queries to the database manager.
