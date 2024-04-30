@@ -17,10 +17,3 @@ run: $(VENV)
 	. $(BIN)/activate && \
 	jupyter notebook
 
-
-.PHONY: format
-format: $(VENV)
-	. $(BIN)/activate && \
-	$(BIN)/ruff check src --fix-only --line-length 120 && \
-	$(BIN)/ruff format src --line-length 120
-
