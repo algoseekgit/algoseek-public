@@ -14,17 +14,18 @@ This is a collection of examples of how to use the Algoseek's Edgar Filing Datas
     - [Software](#software)
   - [Usage](#usage)
 
-----
 ## Available notebooks
 
 The following notebooks are available in this repository:
 
 ### Financial Filings
+
 This notebook shows how to get the financial filings of a company as reported in the 10-K and 10-Q filings.
+
 ### Shares Outstanding
+
 This notebook shows how to get the shares outstanding of a company as reported in the 10-K and 10-Q filings.
 
-----
 ## Prerequisites
 
 ### Database credentials
@@ -43,7 +44,6 @@ For easy of use there is a `.env_example` file in the root of the project that y
 
 You will need to have `python 3.10` installed in your system, you can download it from the [official website](https://www.python.org/downloads/).
 
-----
 ## Usage
 
 In order to run the examples, you will need to install the dependencies, you can do so by running the following command:
