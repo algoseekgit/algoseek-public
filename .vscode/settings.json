@@ -1,0 +1,16 @@
+{
+  "sqltools.connections": [
+    {
+      "server": "18.215.29.95",
+      "port": 8123,
+      "useHTTPS": false,
+      "database": "default",
+      "username": "default",
+      "enableTls": false,
+      "previewLimit": 50,
+      "password": "sigma1321",
+      "driver": "ClickHouse",
+      "name": "EdgarFilingsAdmin"
+    }
+  ]
+}
