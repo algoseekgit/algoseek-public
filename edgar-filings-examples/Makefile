@@ -4,13 +4,13 @@ VENV = .venv
 BIN=$(VENV)/bin
 
 .PHONY: install
-install: $(VENV)
-	$(VENV): requirements.txt
+install: $(VENV)/bin/activate
+
+$(VENV)/bin/activate: requirements.txt
 	$(PY) -m venv $(VENV) && \
 	$(BIN)/pip install --upgrade pip && \
 	$(BIN)/pip install -r requirements.txt && \
-	touch $(VENV)
-
+	touch $(VENV)/bin/activate
 
 .PHONY: run
 run: $(VENV)
